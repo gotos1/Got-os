@@ -1,34 +1,94 @@
-# Got-os
-A minimal x86 operating system written from scratch in pure assembly. No Linux. No Unix. No GNU. Just code and curiosity. Shell, RAM filesystem, and text editor included. Built on a phone. 🐐
-# System Requirements
+# GOT[os]
 
-## Minimum
+> A minimal x86 operating system written from scratch in pure assembly.
 
-- **CPU:** x86 (i386, 32-bit) — Intel Pentium or newer
+No Linux. No Unix. No GNU. Just code and curiosity.
+Shell, RAM filesystem, and text editor included. Built on a phone. 🐐
+
+---
+
+## About
+
+GOT[os] is a hobby operating system written entirely from zero in x86
+32-bit assembly. Every line of code is original.
+
+Named after the goat (GOT = Goat), a personal symbol of childhood.
+
+---
+
+## Features
+
+- **Boot:** Multiboot-compliant, boots via Limine
+- **Shell:** 13+ built-in commands
+- **Filesystem:** RAM-based (create, read, write, delete)
+- **Editor:** Built-in text editor (`edit`)
+- **Hardware:** VGA, Serial I/O, PIC, IDT
+- **Reboot:** ACPI + Triple Fault
+- **Terminal:** Full I/O via COM1
+
+---
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `help` | Show all commands |
+| `version` | Show system version |
+| `clear` | Clear screen |
+| `echo <text>` | Print text |
+| `color 0-7` | Change color |
+| `sysinfo` | System information |
+| `ls` | List files |
+| `touch <name>` | Create file |
+| `cat <name>` | Read file |
+| `rm <name>` | Delete file |
+| `edit <name>` | Edit file |
+| `reboot` | Restart |
+| `off system` | Shutdown |
+
+---
+
+## System Requirements
+
+- **CPU:** x86 (i386, 32-bit)
 - **RAM:** 32 MB
-- **Storage:** 1.44 MB (floppy) or CD-ROM / USB
-- **Display:** VGA-compatible (text mode 80×25)
-- **Input:** Serial terminal (COM1, 38400 baud, 8N1)
-- **Bootloader:** Multiboot 1 compliant (Limine included)
+- **Display:** VGA text mode
+- **Input:** Serial terminal (COM1, 38400 baud)
+- **Bootloader:** Multiboot 1 (Limine)
 
-## Recommended
+---
 
-- **CPU:** Intel Core i3 (1st gen) or newer
-- **RAM:** 128 MB or more
-- **Storage:** Any bootable medium (CD-ROM, USB, HDD)
-- **Display:** Any VGA-compatible monitor
-- **Input:** Serial terminal or Serial-over-USB
+## Build
 
-## Tested On
+```bash
+# Clone
+git clone <repo-url>
+cd got-os
 
-- **QEMU** (i386 emulation) — full support
-- **Real hardware** — x86 PCs with BIOS
-- **Development environment:** Termux on Android (ARM)
+# Install Limine
+git clone https://github.com/limine-bootloader/limine.git --branch=v7.x --depth=1
+cd limine && ./bootstrap && ./configure --enable-bios --enable-bios-cd && make && cd ..
 
-## Notes
+# Build kernel
+make
 
-- Kernel size: ~15 KB
-- No GPU required (text mode only)
-- No disk driver yet (RAM filesystem only)
-- No network support yet
-- Boots in under 1 second on modern hardware
+# Build ISO
+mkdir -p iso/boot/limine
+cp kernel.elf iso/boot/
+cp limine/bin/limine-bios-cd.bin iso/boot/limine/
+cp limine/bin/limine-bios.sys iso/boot/limine/
+cp limine/bin/limine iso/boot/limine/
+
+cat > iso/boot/limine/limine.cfg << EOF
+TIMEOUT=0
+:GOT[os]
+    PROTOCOL=multiboot1
+    KERNEL_PATH=boot:///boot/kernel.elf
+EOF
+
+xorriso -as mkisofs -b boot/limine/limine-bios-cd.bin \
+    -no-emul-boot -boot-load-size 4 -boot-info-table \
+    --protective-msdos-label iso -o gotos.iso
+
+# Run
+qemu-system-i386 -cdrom gotos.iso -m 128 -serial mon:stdio -nographic
