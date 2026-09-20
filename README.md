@@ -92,3 +92,14 @@ xorriso -as mkisofs -b boot/limine/limine-bios-cd.bin \
 
 # Run
 qemu-system-i386 -cdrom gotos.iso -m 128 -serial mon:stdio -nographic
+
+## Credits
+
+### GOT[os]
+Copyright (c) 2026 Abdulbasit Boukhald (عبدالباسط بوخالد).
+Licensed under the **MIT License** — see [LICENSE](LICENSE).
+
+### Limine Bootloader
+Copyright (c) Limine Bootloader Team.
+Licensed under the **BSD 2-Clause License**.
+https://github.com/limine-bootloader/limine
