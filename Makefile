@@ -33,8 +33,14 @@ filesystem.o: filesystem.asm
 edit.o: edit.asm
 	$(AS) $(ASFLAGS) edit.asm -o edit.o
 
-kernel.elf: boot.o kmain.o idt.o pic.o keyboard.o screen.o serial.o filesystem.o edit.o
-	$(LD) $(LDFLAGS) -o kernel.elf boot.o kmain.o idt.o pic.o keyboard.o screen.o serial.o filesystem.o edit.o
+disk.o: disk.asm
+	$(AS) $(ASFLAGS) disk.asm -o disk.o
+
+diskfs.o: diskfs.asm
+	$(AS) $(ASFLAGS) diskfs.asm -o diskfs.o
+
+kernel.elf: boot.o kmain.o idt.o pic.o keyboard.o screen.o serial.o filesystem.o edit.o disk.o diskfs.o
+	$(LD) $(LDFLAGS) -o kernel.elf boot.o kmain.o idt.o pic.o keyboard.o screen.o serial.o filesystem.o edit.o disk.o diskfs.o
 
 clean:
 	rm -f *.o kernel.elf gotos.iso

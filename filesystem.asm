@@ -12,6 +12,7 @@ global fs_create
 global fs_write
 global fs_read
 global fs_delete
+global fs_rename
 global fs_list
 
 ; ================
@@ -329,6 +330,60 @@ print_local:
     ret
 
 ; ================
+; fs_rename
+; esi = old name
+; edi = new name
+; returns: eax = 0 on success, -1 on error
+; ================
+fs_rename:
+    pusha
+
+    mov [fs_rename_new], edi
+
+    ; Find old file
+    call fs_find
+    cmp eax, -1
+    je .error
+
+    mov [fs_index_save], eax
+
+    ; Check new name doesn't already exist
+    mov esi, [fs_rename_new]
+    call fs_find
+    cmp eax, -1
+    jne .error
+
+    ; Get name address: fs_names + index*16
+    mov eax, [fs_index_save]
+    shl eax, 4
+    mov edi, fs_names
+    add edi, eax
+
+    ; Copy new name
+    mov esi, [fs_rename_new]
+    mov ecx, 15
+.copy:
+    mov al, [esi]
+    test al, al
+    jz .done
+    mov [edi], al
+    inc esi
+    inc edi
+    dec ecx
+    jnz .copy
+.done:
+    mov byte [edi], 0
+
+    popa
+    mov eax, 0
+    ret
+
+.error:
+    popa
+    mov eax, -1
+    ret
+
+; ================
 ; fs_find
 ; esi = name (null-terminated)
 ; returns: eax = index (0..7) or -1 if not found
@@ -387,6 +442,7 @@ fs_result: dd 0
 msg_no_files: db "(no files)", 13, 10, 0
 fs_index_save:   dd 0
 fs_bytes_saved:  dd 0
+fs_rename_new:   dd 0
 fs_size_out:     dd 0
 
 section .bss
