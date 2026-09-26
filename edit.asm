@@ -122,6 +122,12 @@ edit_main:
     cmp al, 19              ; Ctrl+S
     je .do_save
 
+    cmp al, 4               ; Ctrl+D
+    je .do_clear
+
+    cmp al, 23              ; Ctrl+W
+    je .do_delword
+
     cmp al, 13
     je .do_newline
     cmp al, 10
@@ -191,6 +197,87 @@ edit_main:
     call edit_print
     jmp .edit_loop
 
+.do_delword:
+    ; Save old length
+    mov eax, [edit_len]
+    mov [del_old_len], eax
+
+    ; Get current length
+    mov ecx, [edit_len]
+    test ecx, ecx
+    jz .edit_loop
+
+    ; Skip trailing spaces
+.skip_spaces:
+    test ecx, ecx
+    jz .done_delword
+    mov eax, ecx
+    dec eax
+    cmp byte [edit_buffer + eax], ' '
+    jne .del_word
+    dec ecx
+    jmp .skip_spaces
+
+.del_word:
+    test ecx, ecx
+    jz .done_delword
+    mov eax, ecx
+    dec eax
+    mov bl, [edit_buffer + eax]
+    cmp bl, ' '
+    je .done_delword
+    cmp bl, 13
+    je .done_delword
+    cmp bl, 10
+    je .done_delword
+    dec ecx
+    jmp .del_word
+
+.done_delword:
+    mov [edit_len], ecx
+    mov eax, ecx
+    mov byte [edit_buffer + eax], 0
+
+    ; Calculate how many chars were deleted
+    mov eax, [del_old_len]
+    sub eax, ecx
+    test eax, eax
+    jz .edit_loop
+    mov [del_count], eax
+
+    ; Send backspace-space-backspace for each deleted char
+.vis_loop:
+    mov al, 8
+    call serial_write_char
+    mov al, ' '
+    call serial_write_char
+    mov al, 8
+    call serial_write_char
+    dec dword [del_count]
+    jnz .vis_loop
+
+    jmp .edit_loop
+
+.do_clear:
+    ; Zero out the buffer
+    mov edi, edit_buffer
+    mov ecx, 512
+    xor eax, eax
+.clear_loop:
+    mov [edi], eax
+    add edi, 4
+    dec ecx
+    jnz .clear_loop
+
+    ; Reset length
+    mov dword [edit_len], 0
+
+    ; Print confirmation
+    mov esi, msg_cleared
+    call edit_print
+
+    jmp .edit_loop
+
 .save_and_exit:
     call edit_save
     mov esi, msg_exited
@@ -210,9 +297,10 @@ edit_save:
     ret
 
 section .data
-msg_header_1: db 13, 10, "--- Editing: ", 0
-msg_header_2: db " ---", 13, 10, "(Ctrl+S = save, Ctrl+Q = quit)", 13, 10, 0
+msg_header_1: db 13, 10, "--- edit v1.0 | Editing: ", 0
+msg_header_2: db " ---", 13, 10, "(Ctrl+S=save, Ctrl+Q=quit)", 13, 10, "(Ctrl+D=clear, Ctrl+W=del word)", 13, 10, 0
 msg_saved:    db 13, 10, "[Saved]", 13, 10, 0
+msg_cleared:  db 13, 10, "[Cleared]", 13, 10, 0
 msg_exited:   db 13, 10, "[Exited edit mode]", 13, 10, 0
 msg_err_create: db "Error creating file.", 13, 10, 0
 
@@ -221,3 +309,5 @@ edit_buffer:     resb 2048
 edit_len:        resd 1
 edit_file_index: resd 1
 edit_name:       resb 16
+del_old_len:     resd 1
+del_count:       resd 1
